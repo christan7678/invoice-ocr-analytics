@@ -9,6 +9,14 @@ use Illuminate\View\View;
 
 class ReportController extends Controller
 {
+    private const REPORT_TYPES = [
+        'full' => 'Full sales report',
+        'monthly' => 'Monthly sales report',
+        'customer' => 'Customer sales report',
+        'payment' => 'Paid/unpaid invoice report',
+        'currency' => 'Currency conversion report',
+    ];
+
     public function index(Request $request): View
     {
         [$invoices, $summary] = $this->reportData($request);
@@ -23,6 +31,7 @@ class ReportController extends Controller
             'currencyBreakdown' => $this->currencyBreakdown($invoices),
             'customers' => $request->user()->company->customers()->orderBy('customer_name')->get(),
             'paymentStatuses' => Invoice::PAYMENT_STATUSES,
+            'reportTypes' => self::REPORT_TYPES,
             'filters' => $request->only(['report_type', 'date_from', 'date_to', 'customer_id', 'payment_status']),
         ]);
     }
@@ -57,21 +66,32 @@ class ReportController extends Controller
     {
         $company = $request->user()->company;
         $query = $company->invoices()->with('customer')->orderBy('invoice_date');
+        $requestedReportType = (string) $request->input('report_type', 'full');
+        $reportType = array_key_exists($requestedReportType, self::REPORT_TYPES) ? $requestedReportType : 'full';
+        $activeFilters = [];
 
         if ($request->filled('date_from')) {
             $query->whereDate('invoice_date', '>=', $request->date('date_from'));
+            $activeFilters[] = 'From '.Carbon::parse($request->date('date_from'))->format('d M Y');
         }
 
         if ($request->filled('date_to')) {
             $query->whereDate('invoice_date', '<=', $request->date('date_to'));
+            $activeFilters[] = 'To '.Carbon::parse($request->date('date_to'))->format('d M Y');
         }
 
         if ($request->filled('customer_id')) {
             $query->where('customer_id', $request->integer('customer_id'));
+            $customerName = $company->customers()
+                ->whereKey($request->integer('customer_id'))
+                ->value('customer_name');
+            $activeFilters[] = 'Customer: '.($customerName ?: 'Selected customer');
         }
 
         if ($request->filled('payment_status')) {
-            $query->where('payment_status', $request->string('payment_status'));
+            $paymentStatus = (string) $request->input('payment_status');
+            $query->where('payment_status', $paymentStatus);
+            $activeFilters[] = 'Payment: '.(Invoice::PAYMENT_STATUSES[$paymentStatus] ?? ucfirst($paymentStatus));
         }
 
         $invoices = $query->get();
@@ -79,7 +99,12 @@ class ReportController extends Controller
         $end = $request->filled('date_to') ? Carbon::parse($request->date('date_to'))->format('d M Y') : 'Today';
 
         return [$invoices, [
+            'report_type' => $reportType,
+            'report_type_label' => self::REPORT_TYPES[$reportType],
             'date_range' => $start.' - '.$end,
+            'active_filters' => $activeFilters,
+            'has_filters' => count($activeFilters) > 0,
+            'generated_at' => now(),
             'invoice_count' => $invoices->count(),
             'total_myr' => (float) $invoices->sum('total_amount_myr'),
             'paid_myr' => (float) $invoices->where('payment_status', 'paid')->sum('total_amount_myr'),

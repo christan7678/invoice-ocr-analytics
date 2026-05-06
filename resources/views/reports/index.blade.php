@@ -15,7 +15,15 @@
     <div class="py-8">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <form method="GET" class="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm print:hidden">
-                <div class="grid gap-4 md:grid-cols-5">
+                <div class="grid gap-4 lg:grid-cols-6">
+                    <div>
+                        <x-input-label for="report_type" value="Report Type" />
+                        <select id="report_type" name="report_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            @foreach ($reportTypes as $value => $label)
+                                <option value="{{ $value }}" @selected(($filters['report_type'] ?? 'full') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div>
                         <x-input-label for="date_from" value="From" />
                         <x-text-input id="date_from" name="date_from" type="date" class="mt-1 block w-full" value="{{ $filters['date_from'] ?? '' }}" />
@@ -49,6 +57,25 @@
                 </div>
             </form>
 
+            <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-5 shadow-sm print:hidden">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold uppercase text-emerald-700">Report generated</p>
+                        <h3 class="mt-1 text-xl font-semibold text-emerald-950">{{ $summary['report_type_label'] }}</h3>
+                        <p class="mt-1 text-sm text-emerald-800">{{ $summary['date_range'] }} | {{ $summary['invoice_count'] }} invoice records | RM{{ number_format($summary['total_myr'], 2) }} total MYR</p>
+                    </div>
+                    <div class="rounded-lg bg-white/80 px-4 py-3 text-sm text-emerald-900">
+                        @if ($summary['has_filters'])
+                            <p class="font-semibold">Active filters</p>
+                            <p class="mt-1">{{ implode(' | ', $summary['active_filters']) }}</p>
+                        @else
+                            <p class="font-semibold">No filters applied</p>
+                            <p class="mt-1">Showing all verified invoice records for this company.</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
             <section class="rounded-lg border border-gray-200 bg-white shadow-sm">
                 <div class="border-b border-gray-200 p-6">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -65,8 +92,9 @@
                         <div>
                             <p class="text-sm font-medium text-emerald-700">Sales Report</p>
                             <h4 class="text-2xl font-semibold text-gray-900">{{ $summary['date_range'] }}</h4>
+                            <p class="mt-1 text-sm text-gray-500">{{ $summary['report_type_label'] }}</p>
                         </div>
-                        <p class="text-sm text-gray-500">Generated {{ now()->format('d M Y, h:i A') }}</p>
+                        <p class="text-sm text-gray-500">Generated {{ $summary['generated_at']->format('d M Y, h:i A') }}</p>
                     </div>
                 </div>
 
@@ -90,7 +118,11 @@
                 </div>
 
                 <div class="grid gap-6 border-t border-gray-200 p-6 lg:grid-cols-2">
-                    <section class="rounded-lg border border-gray-200 bg-white p-5">
+                    <section @class([
+                        'rounded-lg border bg-white p-5',
+                        'border-emerald-300 ring-2 ring-emerald-100' => $summary['report_type'] === 'monthly',
+                        'border-gray-200' => $summary['report_type'] !== 'monthly',
+                    ])>
                         <h4 class="text-base font-semibold text-gray-900">Monthly Breakdown</h4>
                         <div class="mt-4 space-y-3">
                             @forelse ($monthlyBreakdown as $row)
@@ -110,7 +142,11 @@
                         </div>
                     </section>
 
-                    <section class="rounded-lg border border-gray-200 bg-white p-5">
+                    <section @class([
+                        'rounded-lg border bg-white p-5',
+                        'border-emerald-300 ring-2 ring-emerald-100' => $summary['report_type'] === 'customer',
+                        'border-gray-200' => $summary['report_type'] !== 'customer',
+                    ])>
                         <h4 class="text-base font-semibold text-gray-900">Customer Sales</h4>
                         <div class="mt-4 space-y-3">
                             @forelse ($customerBreakdown as $row)
@@ -127,7 +163,11 @@
                         </div>
                     </section>
 
-                    <section class="rounded-lg border border-gray-200 bg-white p-5">
+                    <section @class([
+                        'rounded-lg border bg-white p-5',
+                        'border-emerald-300 ring-2 ring-emerald-100' => $summary['report_type'] === 'payment',
+                        'border-gray-200' => $summary['report_type'] !== 'payment',
+                    ])>
                         <h4 class="text-base font-semibold text-gray-900">Payment Status</h4>
                         <div class="mt-4 grid gap-3 sm:grid-cols-2">
                             @forelse ($statusBreakdown as $row)
@@ -142,7 +182,11 @@
                         </div>
                     </section>
 
-                    <section class="rounded-lg border border-gray-200 bg-white p-5">
+                    <section @class([
+                        'rounded-lg border bg-white p-5',
+                        'border-emerald-300 ring-2 ring-emerald-100' => $summary['report_type'] === 'currency',
+                        'border-gray-200' => $summary['report_type'] !== 'currency',
+                    ])>
                         <h4 class="text-base font-semibold text-gray-900">Currency Conversion Summary</h4>
                         <div class="mt-4 space-y-3">
                             @forelse ($currencyBreakdown as $row)
