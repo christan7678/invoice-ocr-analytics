@@ -401,6 +401,10 @@ class InvoiceFieldExtractor
             $item = $this->parseItemLine($line, $insideTable);
 
             if ($item) {
+                if ($pendingDescription !== null) {
+                    $item['item_name'] = Str::limit(trim($pendingDescription.' '.$item['item_name']), 191, '');
+                }
+
                 $items[] = $item;
                 $pendingDescription = null;
                 continue;
@@ -412,8 +416,10 @@ class InvoiceFieldExtractor
                 continue;
             }
 
-            if ($insideTable && $pendingDescription === null && $this->looksLikeDescriptionOnlyLine($line)) {
-                $pendingDescription = $line;
+            if ($insideTable && $this->looksLikeDescriptionOnlyLine($line)) {
+                $pendingDescription = $pendingDescription
+                    ? trim($pendingDescription.' '.$line)
+                    : $line;
             }
         }
 
@@ -533,13 +539,13 @@ class InvoiceFieldExtractor
     private function fieldConfidences(array $fields, array $warnings, float $lineTotalSum): array
     {
         return [
-            'invoice_number' => filled($fields['invoice_number']) ? 'High' : 'Missing',
-            'invoice_date' => filled($fields['invoice_date']) ? 'Medium' : 'Missing',
-            'customer_name' => filled($fields['customer_name']) ? 'Medium' : 'Missing',
-            'item_rows' => count($fields['items']) > 1 ? 'High' : (count($fields['items']) === 1 ? 'Medium' : 'Missing'),
-            'tax_amount' => $fields['tax_amount'] !== null ? ($fields['tax_rate'] !== null ? 'High' : 'Medium') : 'Missing',
-            'grand_total' => $fields['total_amount'] !== null && ! Str::contains(implode(' ', $warnings), 'grand total') ? 'High' : ($fields['total_amount'] !== null ? 'Medium' : 'Missing'),
-            'calculation_match' => $lineTotalSum > 0 && $fields['subtotal'] !== null && abs($lineTotalSum - (float) $fields['subtotal']) <= 0.05 ? 'High' : 'Low',
+            'invoice_number' => filled($fields['invoice_number']) ? 'High confidence' : 'Missing',
+            'invoice_date' => filled($fields['invoice_date']) ? 'Medium confidence' : 'Missing',
+            'customer_name' => filled($fields['customer_name']) ? 'Medium confidence' : 'Missing',
+            'item_rows' => count($fields['items']) > 1 ? 'High confidence' : (count($fields['items']) === 1 ? 'Medium confidence' : 'Missing'),
+            'tax_amount' => $fields['tax_amount'] !== null ? ($fields['tax_rate'] !== null ? 'High confidence' : 'Medium confidence') : 'Missing',
+            'grand_total' => $fields['total_amount'] !== null && ! Str::contains(implode(' ', $warnings), 'grand total') ? 'High confidence' : ($fields['total_amount'] !== null ? 'Medium confidence' : 'Missing'),
+            'calculation_match' => $lineTotalSum > 0 && $fields['subtotal'] !== null && abs($lineTotalSum - (float) $fields['subtotal']) <= 0.05 ? 'High confidence' : 'Low confidence',
         ];
     }
 
@@ -571,8 +577,8 @@ class InvoiceFieldExtractor
     {
         $line = Str::lower($line);
 
-        return (Str::contains($line, ['description', 'item', 'service', 'particular']))
-            && Str::contains($line, ['qty', 'quantity', 'unit', 'price', 'amount', 'total']);
+        return (Str::contains($line, ['description', 'item', 'service', 'product', 'particular']))
+            && Str::contains($line, ['qty', 'quantity', 'unit', 'rate', 'price', 'amount', 'line total', 'total']);
     }
 
     private function looksLikeDescriptionOnlyLine(string $line): bool

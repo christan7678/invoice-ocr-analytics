@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Invoice extends Model
 {
+    public const VERIFIED_STATUSES = [
+        'manual',
+        'verified',
+        'verified_from_ocr',
+    ];
+
     public const PAYMENT_STATUSES = [
         'paid' => 'Paid',
         'unpaid' => 'Unpaid',
@@ -71,8 +77,25 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class);
     }
 
+    public function scopeVerifiedForAnalytics($query)
+    {
+        return $query->whereIn('verification_status', self::VERIFIED_STATUSES);
+    }
+
     public function paymentStatusLabel(): string
     {
         return self::PAYMENT_STATUSES[$this->payment_status] ?? ucfirst((string) $this->payment_status);
+    }
+
+    public function verificationStatusLabel(): string
+    {
+        return match ($this->verification_status) {
+            'manual' => 'Manual Verified',
+            'verified' => 'Verified',
+            'verified_from_ocr' => 'Verified From OCR',
+            'pending_user_verification' => 'Pending User Verification',
+            'ocr_extracted' => 'OCR Extracted',
+            default => ucfirst(str_replace('_', ' ', (string) $this->verification_status)),
+        };
     }
 }

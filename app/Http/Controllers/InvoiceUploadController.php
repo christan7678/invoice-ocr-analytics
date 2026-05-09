@@ -48,8 +48,8 @@ class InvoiceUploadController extends Controller
 
             $document->update([
                 'ocr_text' => $ocrResult['text'] ?? '',
-                'processing_status' => 'processed',
-                'processing_message' => 'OCR completed. Please verify extracted values before saving.',
+                'processing_status' => 'pending_user_verification',
+                'processing_message' => 'OCR extracted possible invoice values. User verification is required before this data can be used in reports or insights.',
             ]);
 
             $document->ocrExtractionResult()->create([
@@ -87,7 +87,7 @@ class InvoiceUploadController extends Controller
 
         return redirect()
             ->route('invoices.create', ['document' => $document->id])
-            ->with('status', 'OCR completed. Verify the extracted invoice before saving.');
+            ->with('status', 'OCR completed. Please review and correct the extracted invoice before saving it as verified data.');
     }
 
     public function show(Request $request, UploadedDocument $document)

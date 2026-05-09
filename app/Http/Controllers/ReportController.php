@@ -75,7 +75,7 @@ class ReportController extends Controller
         $company = $request->user()->company;
         $query = $company->invoices()
             ->with('customer')
-            ->whereIn('verification_status', ['manual', 'verified', 'verified_from_ocr'])
+            ->verifiedForAnalytics()
             ->orderBy('invoice_date');
         $requestedReportType = (string) $request->input('report_type', 'full');
         $reportType = array_key_exists($requestedReportType, self::REPORT_TYPES) ? $requestedReportType : 'full';

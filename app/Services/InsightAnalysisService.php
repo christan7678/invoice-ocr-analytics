@@ -15,7 +15,10 @@ class InsightAnalysisService
 
     public function analyse(Company $company): array
     {
-        $allInvoices = $company->invoices()->with(['customer', 'items'])->get();
+        $allInvoices = $company->invoices()
+            ->verifiedForAnalytics()
+            ->with(['customer', 'items'])
+            ->get();
         $latestInvoice = $allInvoices->sortByDesc('invoice_date')->first();
 
         if (! $latestInvoice) {

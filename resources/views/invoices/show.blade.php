@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <p class="text-sm font-medium text-emerald-700">{{ $invoice->verification_status }}</p>
+                <p class="text-sm font-medium text-emerald-700">{{ $invoice->verificationStatusLabel() }}</p>
                 <h2 class="text-2xl font-semibold text-gray-900">Invoice {{ $invoice->invoice_number }}</h2>
             </div>
             <div class="flex gap-2">

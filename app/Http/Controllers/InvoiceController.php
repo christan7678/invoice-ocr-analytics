@@ -249,7 +249,7 @@ class InvoiceController extends Controller
             'tax_amount' => ['nullable', 'numeric', 'min:0'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'service_charge' => ['nullable', 'numeric', 'min:0'],
-            'total_amount' => ['nullable', 'numeric', 'min:0'],
+            'total_amount' => ['required', 'numeric', 'min:0.01'],
             'payment_status' => ['required', Rule::in(array_keys(Invoice::PAYMENT_STATUSES))],
             'paid_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -262,6 +262,16 @@ class InvoiceController extends Controller
             'items.*.tax_amount' => ['nullable', 'numeric', 'min:0'],
             'items.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'items.*.line_total' => ['nullable', 'numeric', 'min:0'],
+        ], [
+            'invoice_number.required' => 'Please enter or correct the invoice number before saving.',
+            'invoice_date.required' => 'Please enter or correct the invoice date before saving.',
+            'customer_name.required' => 'Please enter or correct the customer name before saving.',
+            'currency_code.required' => 'Please confirm the invoice currency before saving.',
+            'currency_code.size' => 'Currency must use a 3-letter code such as MYR, USD, or SGD.',
+            'total_amount.required' => 'Please enter or confirm the grand total before saving.',
+            'total_amount.min' => 'Grand total must be greater than zero.',
+            'items.required' => 'Please add at least one invoice item row before saving.',
+            'items.min' => 'Please add at least one invoice item row before saving.',
         ]);
 
         $validated['items'] = collect($validated['items'])

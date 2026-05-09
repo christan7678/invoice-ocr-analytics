@@ -78,6 +78,24 @@
                 <input type="hidden" name="uploaded_document_id" value="{{ $document->id }}">
             @endif
 
+            @if ($document)
+                <section class="rounded-lg border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <p class="text-sm font-semibold uppercase text-emerald-700">Pending User Verification</p>
+                            <h3 class="mt-1 text-lg font-semibold text-emerald-950">Please review the OCR result before saving.</h3>
+                            <p class="mt-2 text-sm leading-6 text-emerald-900">Different companies use different invoice formats, so some fields may be missing or incorrectly detected.</p>
+                            <p class="mt-2 text-sm leading-6 text-emerald-900">OCR helps reduce manual typing, but invoice layouts are different across companies. Please confirm the extracted data before saving so that reports and insights remain accurate.</p>
+                        </div>
+                        <div class="rounded-md bg-white/80 px-4 py-3 text-sm text-emerald-900">
+                            <p class="font-semibold">Status</p>
+                            <p class="mt-1">{{ Illuminate\Support\Str::headline($document->processing_status) }}</p>
+                            <p class="mt-2 text-xs text-emerald-700">This OCR result is not used in dashboard, reports, or insights until you save it as a verified invoice.</p>
+                        </div>
+                    </div>
+                </section>
+            @endif
+
             @if ($fieldConfidences || $extractionWarnings || $storedCalculationWarnings || $riskAlerts)
                 <section class="rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-sm">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -131,12 +149,14 @@
                         <div>
                             <x-input-label for="invoice_number" value="Invoice Number" />
                             <x-text-input id="invoice_number" name="invoice_number" class="mt-1 block w-full" value="{{ old('invoice_number', $invoice?->invoice_number ?? $extraction?->extracted_invoice_number ?? '') }}" required />
+                            <p class="mt-1 text-xs text-gray-500">Confidence: {{ $fieldConfidences['invoice_number'] ?? 'Manual' }}</p>
                             <x-input-error :messages="$errors->get('invoice_number')" class="mt-2" />
                         </div>
 
                         <div>
                             <x-input-label for="invoice_date" value="Invoice Date" />
                             <x-text-input id="invoice_date" name="invoice_date" type="date" class="mt-1 block w-full" value="{{ old('invoice_date', optional($invoice?->invoice_date)->format('Y-m-d') ?? optional($extraction?->extracted_invoice_date)->format('Y-m-d')) }}" required />
+                            <p class="mt-1 text-xs text-gray-500">Confidence: {{ $fieldConfidences['invoice_date'] ?? 'Manual' }}</p>
                             <x-input-error :messages="$errors->get('invoice_date')" class="mt-2" />
                         </div>
 
@@ -200,6 +220,7 @@
                     <div>
                         <x-input-label for="customer_name" value="Customer Name" />
                         <x-text-input id="customer_name" name="customer_name" list="customer-options" class="mt-1 block w-full" value="{{ old('customer_name', $invoice?->customer?->customer_name ?? $extraction?->extracted_customer_name ?? '') }}" required />
+                        <p class="mt-1 text-xs text-gray-500">Confidence: {{ $fieldConfidences['customer_name'] ?? 'Manual' }}</p>
                         <datalist id="customer-options">
                             @foreach ($customers as $customer)
                                 <option value="{{ $customer->customer_name }}">{{ $customer->customer_email }}</option>
@@ -253,10 +274,13 @@
                     <div>
                         <x-input-label for="tax_amount" value="Tax Amount" />
                         <input id="tax_amount" name="tax_amount" type="number" step="0.01" min="0" x-model.number="amounts.tax_amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <p class="mt-1 text-xs text-gray-500">Confidence: {{ $fieldConfidences['tax_amount'] ?? 'Manual' }}</p>
                     </div>
                     <div>
                         <x-input-label for="total_amount" value="Grand Total" />
                         <input id="total_amount" name="total_amount" type="number" step="0.01" min="0" x-model.number="amounts.total_amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <p class="mt-1 text-xs text-gray-500">Confidence: {{ $fieldConfidences['grand_total'] ?? 'Manual' }}</p>
+                        <x-input-error :messages="$errors->get('total_amount')" class="mt-2" />
                     </div>
                 </div>
 
@@ -287,6 +311,7 @@
                     <div>
                         <h3 class="text-base font-semibold text-gray-900">Invoice Items</h3>
                         <p class="mt-1 text-sm text-gray-500">If OCR cannot read detailed line items, use one summary item that matches the invoice total.</p>
+                        <p class="mt-1 text-xs text-gray-500">Item row confidence: {{ $fieldConfidences['item_rows'] ?? 'Manual' }}</p>
                     </div>
                     <div class="flex gap-2">
                         @if ($document)
@@ -376,6 +401,7 @@
                         </div>
                         <details class="mt-4" open>
                             <summary class="cursor-pointer text-sm font-semibold text-gray-700">Raw OCR Text</summary>
+                            <p class="mt-2 text-xs text-gray-500">Use this raw OCR text as reference when correcting the fields.</p>
                             <pre class="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-950 p-4 text-xs text-gray-100">{{ $document->ocr_text ?: 'No OCR text available.' }}</pre>
                         </details>
                     </div>

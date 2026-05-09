@@ -14,9 +14,11 @@ class InvoiceRiskAnalyzer
         return $this->forInvoiceData([
             'invoice_number' => $fields['invoice_number'] ?? null,
             'invoice_date' => $fields['invoice_date'] ?? null,
+            'due_date' => $fields['due_date'] ?? null,
             'customer_name' => $fields['customer_name'] ?? null,
             'currency_code' => $fields['currency_code'] ?? 'MYR',
             'exchange_rate_to_myr' => 1,
+            'payment_status' => $fields['payment_status'] ?? 'pending',
             'subtotal' => $fields['subtotal'] ?? null,
             'tax_amount' => $fields['tax_amount'] ?? null,
             'discount_amount' => $fields['discount_amount'] ?? null,
@@ -32,8 +34,10 @@ class InvoiceRiskAnalyzer
         $invoiceNumber = trim((string) ($data['invoice_number'] ?? ''));
         $customerName = trim((string) ($data['customer_name'] ?? ''));
         $invoiceDate = $data['invoice_date'] ?? null;
+        $dueDate = $data['due_date'] ?? null;
         $totalAmount = $this->numberOrNull($data['total_amount'] ?? null);
         $currency = strtoupper((string) ($data['currency_code'] ?? 'MYR'));
+        $paymentStatus = (string) ($data['payment_status'] ?? 'pending');
         $items = $data['items'] ?? [];
 
         foreach ($existingWarnings as $warning) {
@@ -56,6 +60,26 @@ class InvoiceRiskAnalyzer
             $alerts[] = $this->alert('High', 'No invoice item rows are available.', 'missing_items');
         }
 
+        if ($totalAmount === null || $totalAmount <= 0) {
+            $alerts[] = $this->alert('High', 'Grand total is missing or zero.', 'missing_grand_total');
+        }
+
+        foreach ($items as $index => $item) {
+            $row = $index + 1;
+
+            if (! filled($item['item_name'] ?? null)) {
+                $alerts[] = $this->alert('Medium', "Item row {$row} is missing a description.", 'missing_item_description');
+            }
+
+            if ($this->numberOrNull($item['quantity'] ?? null) === null) {
+                $alerts[] = $this->alert('Medium', "Item row {$row} is missing quantity.", 'missing_item_quantity');
+            }
+
+            if ($this->numberOrNull($item['unit_price'] ?? null) === null) {
+                $alerts[] = $this->alert('Medium', "Item row {$row} is missing unit price.", 'missing_item_unit_price');
+            }
+        }
+
         $this->duplicateAlerts($alerts, $companyId, $ignoreInvoiceId, $invoiceNumber, $customerName, $invoiceDate, $totalAmount, $currency);
         $this->calculationAlerts($alerts, $data);
 
@@ -65,6 +89,10 @@ class InvoiceRiskAnalyzer
 
         if ($currency !== 'MYR' && $this->numberOrNull($data['exchange_rate_to_myr'] ?? null) === null) {
             $alerts[] = $this->alert('Medium', 'Foreign currency is used but exchange rate is missing.', 'currency_rate_missing');
+        }
+
+        if ($dueDate && in_array($paymentStatus, ['unpaid', 'pending', 'partial', 'overdue'], true) && Carbon::parse($dueDate)->isPast()) {
+            $alerts[] = $this->alert('High', 'Invoice is overdue and not fully paid.', 'overdue');
         }
 
         return collect($alerts)
@@ -84,8 +112,10 @@ class InvoiceRiskAnalyzer
             'invoice_number' => $invoice->invoice_number,
             'invoice_date' => $invoice->invoice_date?->toDateString(),
             'customer_name' => $invoice->customer?->customer_name,
+            'due_date' => $invoice->due_date?->toDateString(),
             'currency_code' => $invoice->currency_code,
             'exchange_rate_to_myr' => $invoice->exchange_rate_to_myr,
+            'payment_status' => $invoice->payment_status,
             'subtotal' => $invoice->subtotal,
             'tax_amount' => $invoice->tax_amount,
             'discount_amount' => $invoice->discount_amount,
@@ -160,6 +190,20 @@ class InvoiceRiskAnalyzer
         $total = $this->numberOrNull($data['total_amount'] ?? null);
         $items = $data['items'] ?? [];
         $lineSum = round((float) collect($items)->sum(fn ($item) => (float) ($item['line_total'] ?? $item['total_price'] ?? 0)), 2);
+
+        foreach ($items as $item) {
+            $quantity = $this->numberOrNull($item['quantity'] ?? null);
+            $unitPrice = $this->numberOrNull($item['unit_price'] ?? null);
+            $lineTotal = $this->numberOrNull($item['line_total'] ?? $item['total_price'] ?? null);
+
+            if ($quantity !== null && $unitPrice !== null && $lineTotal !== null) {
+                $expectedLine = round($quantity * $unitPrice, 2);
+
+                if (abs($expectedLine - $lineTotal) > 0.05) {
+                    $alerts[] = $this->alert('Medium', 'Line item total does not match quantity multiplied by unit price.', 'line_total_mismatch');
+                }
+            }
+        }
 
         if ($subtotal !== null && $lineSum > 0 && abs($subtotal - $lineSum) > 0.05) {
             $alerts[] = $this->alert('High', 'Item totals do not match subtotal.', 'item_subtotal_mismatch');

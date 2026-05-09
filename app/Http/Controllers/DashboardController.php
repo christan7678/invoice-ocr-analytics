@@ -14,11 +14,12 @@ class DashboardController extends Controller
         $now = Carbon::now();
 
         $monthInvoices = $company->invoices()
+            ->verifiedForAnalytics()
             ->with('customer')
             ->whereBetween('invoice_date', [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()])
             ->get();
 
-        $allInvoices = $company->invoices()->with('customer')->get();
+        $allInvoices = $company->invoices()->verifiedForAnalytics()->with('customer')->get();
 
         $trend = collect(range(5, 0))->map(function (int $monthsAgo) use ($company, $now) {
             $month = $now->copy()->subMonths($monthsAgo);
@@ -26,6 +27,7 @@ class DashboardController extends Controller
             return [
                 'label' => $month->format('M Y'),
                 'total' => (float) $company->invoices()
+                    ->verifiedForAnalytics()
                     ->whereBetween('invoice_date', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
                     ->sum('total_amount_myr'),
             ];

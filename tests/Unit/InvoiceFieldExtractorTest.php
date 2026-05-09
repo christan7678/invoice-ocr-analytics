@@ -127,4 +127,24 @@ class InvoiceFieldExtractorTest extends TestCase
 
         $this->assertContains('A tax label was detected, but the tax amount could not be extracted.', $result['warnings']);
     }
+
+    public function test_extracts_product_service_rate_line_total_layout_with_continued_description(): void
+    {
+        $text = <<<OCR
+        Invoice No: INV-2006
+        Date: 10/03/2025
+        Customer: ABC Sdn Bhd
+        Product/Service Qty Rate Line Total
+        Website Design
+        Custom landing page package 1 1800.00 1800.00
+        Monthly Support 2 200.00 400.00
+        Grand Total RM 2,200.00
+        OCR;
+
+        $result = (new InvoiceFieldExtractor())->extract($text);
+
+        $this->assertCount(2, $result['items']);
+        $this->assertSame('Website Design Custom landing page package', $result['items'][0]['item_name']);
+        $this->assertSame(400.0, $result['items'][1]['line_total']);
+    }
 }
