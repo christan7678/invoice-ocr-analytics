@@ -40,4 +40,11 @@ return [
         'verify_ssl' => env('EXCHANGE_RATE_VERIFY_SSL', true),
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+        'base_url' => env('GEMINI_API_BASE', 'https://generativelanguage.googleapis.com/v1beta'),
+        'timeout' => env('GEMINI_TIMEOUT', 12),
+    ],
+
 ];

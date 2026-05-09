@@ -33,6 +33,8 @@
                                     <th class="px-4 py-3">Description</th>
                                     <th class="px-4 py-3 text-right">Qty</th>
                                     <th class="px-4 py-3 text-right">Unit</th>
+                                    <th class="px-4 py-3 text-right">Line</th>
+                                    <th class="px-4 py-3 text-right">Tax %</th>
                                     <th class="px-4 py-3 text-right">Tax</th>
                                     <th class="px-4 py-3 text-right">Discount</th>
                                     <th class="px-4 py-3 text-right">Total</th>
@@ -45,6 +47,8 @@
                                         <td class="px-4 py-3 text-gray-600">{{ $item->description }}</td>
                                         <td class="px-4 py-3 text-right">{{ number_format($item->quantity, 2) }}</td>
                                         <td class="px-4 py-3 text-right">{{ number_format($item->unit_price, 2) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ number_format($item->line_total ?? ($item->quantity * $item->unit_price), 2) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ $item->tax_rate === null ? '-' : number_format($item->tax_rate, 2).'%' }}</td>
                                         <td class="px-4 py-3 text-right">{{ number_format($item->tax_amount, 2) }}</td>
                                         <td class="px-4 py-3 text-right">{{ number_format($item->discount_amount, 2) }}</td>
                                         <td class="px-4 py-3 text-right font-semibold">{{ number_format($item->total_price, 2) }}</td>
@@ -63,12 +67,26 @@
                             <div class="flex justify-between"><dt class="text-gray-500">Date</dt><dd>{{ $invoice->invoice_date->format('d M Y') }}</dd></div>
                             <div class="flex justify-between"><dt class="text-gray-500">Status</dt><dd>{{ $invoice->paymentStatusLabel() }}</dd></div>
                             <div class="flex justify-between"><dt class="text-gray-500">Subtotal</dt><dd>{{ $invoice->currency_code }} {{ number_format($invoice->subtotal, 2) }}</dd></div>
-                            <div class="flex justify-between"><dt class="text-gray-500">Tax</dt><dd>{{ $invoice->currency_code }} {{ number_format($invoice->tax_amount, 2) }}</dd></div>
+                            <div class="flex justify-between"><dt class="text-gray-500">Tax</dt><dd>{{ $invoice->tax_rate ? number_format($invoice->tax_rate, 2).'%' : '' }} {{ $invoice->currency_code }} {{ number_format($invoice->tax_amount, 2) }}</dd></div>
                             <div class="flex justify-between"><dt class="text-gray-500">Discount</dt><dd>{{ $invoice->currency_code }} {{ number_format($invoice->discount_amount, 2) }}</dd></div>
+                            <div class="flex justify-between"><dt class="text-gray-500">Service Charge</dt><dd>{{ $invoice->currency_code }} {{ number_format($invoice->service_charge ?? 0, 2) }}</dd></div>
                             <div class="border-t border-gray-200 pt-3 flex justify-between text-base"><dt class="font-semibold text-gray-900">Original Total</dt><dd class="font-semibold">{{ $invoice->currency_code }} {{ number_format($invoice->total_amount, 2) }}</dd></div>
                             <div class="flex justify-between text-base"><dt class="font-semibold text-gray-900">Report Total</dt><dd class="font-semibold">RM{{ number_format($invoice->total_amount_myr, 2) }}</dd></div>
                         </dl>
                     </section>
+
+                    @if ($riskAlerts)
+                        <section class="rounded-lg border border-amber-200 bg-amber-50 p-6 shadow-sm">
+                            <h3 class="text-base font-semibold text-amber-950">Risk Alerts</h3>
+                            <div class="mt-4 space-y-3">
+                                @foreach ($riskAlerts as $alert)
+                                    <div class="rounded-md bg-white px-4 py-3 text-sm {{ ($alert['severity'] ?? '') === 'High' ? 'text-red-700' : 'text-amber-900' }}">
+                                        <span class="font-semibold">{{ $alert['severity'] ?? 'Warning' }}:</span> {{ $alert['message'] ?? $alert }}
+                                    </div>
+                                @endforeach
+                            </div>
+                        </section>
+                    @endif
 
                     @if ($invoice->uploadedDocument)
                         <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
+use App\Services\ReportExplanationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -17,22 +18,25 @@ class ReportController extends Controller
         'currency' => 'Currency conversion report',
     ];
 
-    public function index(Request $request): View
+    public function index(Request $request, ReportExplanationService $explanationService): View
     {
         [$invoices, $summary] = $this->reportData($request);
+        $customerBreakdown = $this->customerBreakdown($invoices);
 
         return view('reports.index', [
             'company' => $request->user()->company,
             'invoices' => $invoices,
             'summary' => $summary,
             'monthlyBreakdown' => $this->monthlyBreakdown($invoices),
-            'customerBreakdown' => $this->customerBreakdown($invoices),
+            'customerBreakdown' => $customerBreakdown,
             'statusBreakdown' => $this->statusBreakdown($invoices),
             'currencyBreakdown' => $this->currencyBreakdown($invoices),
             'customers' => $request->user()->company->customers()->orderBy('customer_name')->get(),
             'paymentStatuses' => Invoice::PAYMENT_STATUSES,
             'reportTypes' => self::REPORT_TYPES,
-            'filters' => $request->only(['report_type', 'date_from', 'date_to', 'customer_id', 'payment_status']),
+            'currencies' => $request->user()->company->invoices()->select('currency_code')->distinct()->orderBy('currency_code')->pluck('currency_code'),
+            'reportExplanation' => $explanationService->explain($invoices, $summary, $customerBreakdown->all()),
+            'filters' => $request->only(['report_type', 'date_from', 'date_to', 'customer_id', 'payment_status', 'currency_code']),
         ]);
     }
 
@@ -43,7 +47,7 @@ class ReportController extends Controller
 
         return response()->streamDownload(function () use ($invoices) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Invoice No', 'Date', 'Customer', 'Status', 'Currency', 'Original Total', 'Rate to MYR', 'Total MYR']);
+            fputcsv($handle, ['Invoice No', 'Date', 'Customer', 'Status', 'Currency', 'Subtotal', 'Tax', 'Discount', 'Service Charge', 'Original Total', 'Rate to MYR', 'Total MYR']);
 
             foreach ($invoices as $invoice) {
                 fputcsv($handle, [
@@ -52,6 +56,10 @@ class ReportController extends Controller
                     $invoice->customer->customer_name,
                     $invoice->paymentStatusLabel(),
                     $invoice->currency_code,
+                    number_format($invoice->subtotal, 2, '.', ''),
+                    number_format($invoice->tax_amount, 2, '.', ''),
+                    number_format($invoice->discount_amount, 2, '.', ''),
+                    number_format($invoice->service_charge ?? 0, 2, '.', ''),
                     number_format($invoice->total_amount, 2, '.', ''),
                     number_format($invoice->exchange_rate_to_myr, 6, '.', ''),
                     number_format($invoice->total_amount_myr, 2, '.', ''),
@@ -65,7 +73,10 @@ class ReportController extends Controller
     private function reportData(Request $request): array
     {
         $company = $request->user()->company;
-        $query = $company->invoices()->with('customer')->orderBy('invoice_date');
+        $query = $company->invoices()
+            ->with('customer')
+            ->whereIn('verification_status', ['manual', 'verified', 'verified_from_ocr'])
+            ->orderBy('invoice_date');
         $requestedReportType = (string) $request->input('report_type', 'full');
         $reportType = array_key_exists($requestedReportType, self::REPORT_TYPES) ? $requestedReportType : 'full';
         $activeFilters = [];
@@ -94,6 +105,12 @@ class ReportController extends Controller
             $activeFilters[] = 'Payment: '.(Invoice::PAYMENT_STATUSES[$paymentStatus] ?? ucfirst($paymentStatus));
         }
 
+        if ($request->filled('currency_code')) {
+            $currency = strtoupper((string) $request->input('currency_code'));
+            $query->where('currency_code', $currency);
+            $activeFilters[] = 'Currency: '.$currency;
+        }
+
         $invoices = $query->get();
         $start = $request->filled('date_from') ? Carbon::parse($request->date('date_from'))->format('d M Y') : 'All dates';
         $end = $request->filled('date_to') ? Carbon::parse($request->date('date_to'))->format('d M Y') : 'Today';
@@ -109,6 +126,10 @@ class ReportController extends Controller
             'total_myr' => (float) $invoices->sum('total_amount_myr'),
             'paid_myr' => (float) $invoices->where('payment_status', 'paid')->sum('total_amount_myr'),
             'outstanding_myr' => (float) $invoices->whereIn('payment_status', ['unpaid', 'pending', 'partial', 'overdue'])->sum('total_amount_myr'),
+            'tax_total_myr' => (float) $invoices->sum(fn ($invoice) => (float) $invoice->tax_amount * (float) $invoice->exchange_rate_to_myr),
+            'discount_total_myr' => (float) $invoices->sum(fn ($invoice) => (float) $invoice->discount_amount * (float) $invoice->exchange_rate_to_myr),
+            'service_charge_total_myr' => (float) $invoices->sum(fn ($invoice) => (float) ($invoice->service_charge ?? 0) * (float) $invoice->exchange_rate_to_myr),
+            'average_invoice_myr' => $invoices->count() > 0 ? round((float) $invoices->sum('total_amount_myr') / $invoices->count(), 2) : 0,
         ]];
     }
 

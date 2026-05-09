@@ -15,7 +15,7 @@
     <div class="py-8">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <form method="GET" class="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm print:hidden">
-                <div class="grid gap-4 lg:grid-cols-6">
+                <div class="grid gap-4 lg:grid-cols-7">
                     <div>
                         <x-input-label for="report_type" value="Report Type" />
                         <select id="report_type" name="report_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
@@ -47,6 +47,15 @@
                             <option value="">All statuses</option>
                             @foreach ($paymentStatuses as $value => $label)
                                 <option value="{{ $value }}" @selected(($filters['payment_status'] ?? '') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <x-input-label for="currency_code" value="Currency" />
+                        <select id="currency_code" name="currency_code" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <option value="">All</option>
+                            @foreach ($currencies as $currency)
+                                <option value="{{ $currency }}" @selected(($filters['currency_code'] ?? '') === $currency)>{{ $currency }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -114,6 +123,31 @@
                     <div class="rounded-lg bg-amber-50 p-4">
                         <p class="text-sm text-amber-700">Outstanding</p>
                         <p class="mt-1 text-2xl font-semibold text-amber-900">RM{{ number_format($summary['outstanding_myr'], 2) }}</p>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 p-6">
+                    <div class="rounded-lg bg-gray-50 p-5">
+                        <p class="text-sm font-semibold uppercase text-emerald-700">Report Explanation</p>
+                        <p class="mt-2 text-base leading-7 text-gray-800">{{ $reportExplanation }}</p>
+                    </div>
+                    <div class="mt-4 grid gap-4 sm:grid-cols-4">
+                        <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+                            <p class="text-sm text-gray-500">Tax Total</p>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">RM{{ number_format($summary['tax_total_myr'], 2) }}</p>
+                        </div>
+                        <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+                            <p class="text-sm text-gray-500">Discount Total</p>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">RM{{ number_format($summary['discount_total_myr'], 2) }}</p>
+                        </div>
+                        <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+                            <p class="text-sm text-gray-500">Service Charge</p>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">RM{{ number_format($summary['service_charge_total_myr'], 2) }}</p>
+                        </div>
+                        <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+                            <p class="text-sm text-gray-500">Average Invoice</p>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">RM{{ number_format($summary['average_invoice_myr'], 2) }}</p>
+                        </div>
                     </div>
                 </div>
 

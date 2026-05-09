@@ -27,13 +27,18 @@ class Invoice extends Model
         'subtotal',
         'tax_amount',
         'discount_amount',
+        'service_charge',
+        'tax_rate',
         'total_amount',
         'currency_code',
         'exchange_rate_to_myr',
         'total_amount_myr',
         'payment_status',
+        'paid_at',
         'verification_status',
         'notes',
+        'raw_ocr_text',
+        'extraction_confidence_summary',
     ];
 
     protected function casts(): array
@@ -41,6 +46,8 @@ class Invoice extends Model
         return [
             'invoice_date' => 'date',
             'due_date' => 'date',
+            'paid_at' => 'datetime',
+            'extraction_confidence_summary' => 'array',
         ];
     }
 

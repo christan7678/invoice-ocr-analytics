@@ -19,6 +19,8 @@
                                 <th class="px-6 py-3">Document</th>
                                 <th class="px-6 py-3">Invoice No</th>
                                 <th class="px-6 py-3">Customer</th>
+                                <th class="px-6 py-3">Items</th>
+                                <th class="px-6 py-3">Tax</th>
                                 <th class="px-6 py-3">Total</th>
                                 <th class="px-6 py-3">Confidence</th>
                                 <th class="px-6 py-3">Verified</th>
@@ -30,13 +32,18 @@
                                     <td class="px-6 py-4 font-medium text-gray-900">{{ $document->file_name }}</td>
                                     <td class="px-6 py-4">{{ $document->ocrExtractionResult?->extracted_invoice_number ?? '-' }}</td>
                                     <td class="px-6 py-4">{{ $document->ocrExtractionResult?->extracted_customer_name ?? '-' }}</td>
+                                    <td class="px-6 py-4">{{ count($document->ocrExtractionResult?->extracted_items ?? []) }}</td>
+                                    <td class="px-6 py-4">
+                                        {{ $document->ocrExtractionResult?->extracted_tax_rate ? number_format($document->ocrExtractionResult->extracted_tax_rate, 2).'%' : '' }}
+                                        {{ $document->ocrExtractionResult?->extracted_tax_amount ? number_format($document->ocrExtractionResult->extracted_tax_amount, 2) : '-' }}
+                                    </td>
                                     <td class="px-6 py-4">{{ $document->ocrExtractionResult?->extracted_total_amount ? number_format($document->ocrExtractionResult->extracted_total_amount, 2) : '-' }}</td>
                                     <td class="px-6 py-4">{{ $document->ocrExtractionResult?->confidence_score ? number_format($document->ocrExtractionResult->confidence_score, 2).'%' : '-' }}</td>
                                     <td class="px-6 py-4">{{ $document->ocrExtractionResult?->is_verified ? 'Yes' : 'No' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-6 py-10 text-center text-gray-500">No OCR documents uploaded yet.</td>
+                                    <td colspan="8" class="px-6 py-10 text-center text-gray-500">No OCR documents uploaded yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>

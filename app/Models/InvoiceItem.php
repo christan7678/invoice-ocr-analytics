@@ -13,8 +13,10 @@ class InvoiceItem extends Model
         'description',
         'quantity',
         'unit_price',
+        'tax_rate',
         'tax_amount',
         'discount_amount',
+        'line_total',
         'total_price',
     ];
 

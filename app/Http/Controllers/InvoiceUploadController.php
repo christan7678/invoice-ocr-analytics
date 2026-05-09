@@ -55,13 +55,23 @@ class InvoiceUploadController extends Controller
             $document->ocrExtractionResult()->create([
                 'extracted_invoice_number' => $fields['invoice_number'],
                 'extracted_invoice_date' => $fields['invoice_date'],
+                'extracted_due_date' => $fields['due_date'],
                 'extracted_customer_name' => $fields['customer_name'],
+                'extracted_customer_email' => $fields['customer_email'],
+                'extracted_customer_phone' => $fields['customer_phone'],
+                'extracted_customer_address' => $fields['customer_address'],
                 'extracted_subtotal' => $fields['subtotal'],
                 'extracted_tax_amount' => $fields['tax_amount'],
+                'extracted_tax_rate' => $fields['tax_rate'],
                 'extracted_discount_amount' => $fields['discount_amount'],
+                'extracted_service_charge' => $fields['service_charge'],
                 'extracted_total_amount' => $fields['total_amount'],
                 'extracted_currency_code' => $fields['currency_code'],
                 'extracted_payment_status' => $fields['payment_status'],
+                'extracted_items' => $fields['items'],
+                'extraction_warnings' => $fields['warnings'],
+                'field_confidences' => $fields['field_confidences'],
+                'calculation_summary' => $fields['calculation_summary'],
                 'confidence_score' => $ocrResult['confidence'] ?? $fields['confidence_score'],
             ]);
         } catch (\Throwable $exception) {
